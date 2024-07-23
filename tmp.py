@@ -9,10 +9,6 @@ import plotly.express as px
 from pyvis.network import Network
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
-
-# %%
-print(f.MIN_HEIGHT)
-
 # %% [markdown]
 # Création du csv avec toutes les transactions d'un bloc
 
@@ -129,43 +125,6 @@ txs = f.read_tx_csv(3139131)
 # %%
 out = [f.convert_keyoffset_to_request(keyoffset) for keyoffset in  eval(txs[0][3])[0][1]]
 f.get_info_output(out=out)['outs']
-
-# %%
-f.get_block(3112806)
-# %%
-def get_adress(pre_adr: str, l: list):
-    res = []
-    for i in l:
-        if i[0:len(pre_adr)] == pre_adr:
-            res.append(i)
-    return res
-
-def get_txs_list(adr:str, all_txs:dict):
-    txs_list = []
-    for i in all_txs:
-        if (adr in all_txs[i]['in']) or (adr in all_txs[i]['out']):
-            txs_list.append(i)
-    return txs_list
-
-get_adress('73a61', list(nodes_style.keys()))
-
-# %%
-len(all_txs['54917b55a8878250db0dd9072d046096f1a51d2bb57a7cf42e29806bdc680002']['in'])
-# %%
-all_adr['755123ffc52e2c705feb7d7ffec3734961f47790dcabcdcace405c6dbbbed910']
-
-# %%
-txs_list = get_txs_list('1d4156a7981e00af92300e99f6de647e7b84157f7ee2cade6bb06cc779932f5e', all_txs)
-txs_list
-
-# %%
-def get_common_inputs_and_difference(tx1_hash:str, tx2_hash:str):
-    tx1_inputs = set(all_txs[tx1_hash]['in'])
-    tx2_inputs = set(all_txs[tx2_hash]['in'])
-    return tx1_inputs.intersection(tx2_inputs), tx1_inputs.difference(tx2_inputs), tx2_inputs.difference(tx1_inputs)
-
-common1, diff1, diff2 = get_common_inputs_and_difference(get_adress('82021', list(labels.keys()))[0], get_adress('09bde', list(labels.keys()))[0])
-common2, diff4, diff3 = get_common_inputs_and_difference(get_adress('82021', list(labels.keys()))[0], get_adress('3d27', list(labels.keys()))[0])
 
 # %% [markdown]
 # Stats

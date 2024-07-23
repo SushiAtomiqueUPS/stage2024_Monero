@@ -392,9 +392,10 @@ def draw_from_to(begin, end, url=MAIN_URL, min_mixing = 5):
     if end-begin >= 0:
         # Chargement des bloc de hauteur begin à end inclus
         #blocks = get_blocks_from_to(begin, end, method='from_node')
-
+        print("Création du graphe...")
         all_edges, all_nodes, all_nodes_colors, all_txs, all_adr = create_edges_labels_txs(begin, end)
         
+        print("Filtrage...")
         #Filtrage des noeuds
         nodes_set = keep_relevant_inputs(all_adr, all_nodes_colors, min_mixing)
         
@@ -408,14 +409,13 @@ def draw_from_to(begin, end, url=MAIN_URL, min_mixing = 5):
         nodes_set = nodes_set.union(hash_nodes)
         keep_nodes = [(hash_node, all_nodes_colors[hash_node]) for hash_node in nodes_set]
 
-        #keep_nodes = all_nodes
-        #keep_edges = all_edges
+        print("Création du graphe avec networkx...")
         # Création d'un fichier html du graphe avec toutes les transactions du bloc 3159524
         G=networkx.DiGraph()
         G.add_nodes_from(keep_nodes)
         G.add_edges_from(keep_edges)
-        print("pass making edges and G")
-        
+    
+        print("Création du fichier html correspondant au graphe...")
         net = Network(height='500px', width='80%', bgcolor='#ffffff', # Changed height
                         font_color='black', notebook=True, directed=True, neighborhood_highlight=True)
         net.toggle_physics(False)
@@ -433,7 +433,27 @@ def draw_from_to(begin, end, url=MAIN_URL, min_mixing = 5):
         net.show_buttons(filter_=['physics'])
         net.write_html("Monero_graph.html")
 
-        print("pass making net")
+        print("Fini")
         return keep_edges, keep_nodes, all_txs, all_adr, net
     else: 
         raise IndexError(f'end={end} < begin={begin}')
+
+
+def get_adress(pre_adr: str, l: list):
+    res = []
+    for i in l:
+        if i[0:len(pre_adr)] == pre_adr:
+            res.append(i)
+    return res
+
+def get_txs_list(adr:str, all_txs:dict):
+    txs_list = []
+    for i in all_txs:
+        if (adr in all_txs[i]['in']) or (adr in all_txs[i]['out']):
+            txs_list.append(i)
+    return txs_list
+
+def get_common_inputs_and_difference(tx1_hash:str, tx2_hash:str):
+    tx1_inputs = set(all_txs[tx1_hash]['in'])
+    tx2_inputs = set(all_txs[tx2_hash]['in'])
+    return tx1_inputs.intersection(tx2_inputs), tx1_inputs.difference(tx2_inputs), tx2_inputs.difference(tx1_inputs)
