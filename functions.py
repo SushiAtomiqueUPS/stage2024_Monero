@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import dash
 import plotly.express as px
+import timestamp as ts
 from pyvis.network import Network
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
@@ -24,11 +25,14 @@ DATA_FILE_FROM_PATH = os.path.join(os.path.dirname(os.path.abspath('tmp.py')), "
 Make JSON request and return it
 """
 def make_json_request(request: dict, method: str, url=MAIN_URL):
+    #json_method = url.split('/')[len(url.split('/'))-1]
+    #if json_method == 'json_rpc' or json_method == 'get_transactions' or json_method == 'get_outs':
+
     if method == 'get_block':
         if url.split('/')[len(url.split('/'))-1] != 'json_rpc':
             return requests.post(url+'/json_rpc', json=request).json().get('result')
         else:
-            return requests.post(url, json=request).json().get('result')
+            return requests.post(url, json=request).json()
     elif method == 'get_tx':
         if url.split('/')[len(url.split('/'))-1] != 'get_transactions':
             return requests.post(url+'/get_transactions', json=request).json()
@@ -61,17 +65,14 @@ def get_info_tx(tx, url=MAIN_URL):
 """
 Convert a JSON request to a Serie
 """
-def json_result_to_serie(request_result: dict, method: str)->pd.Series:
-    if method == 'from_node':
-        tmp = request_result['block_header'].copy()
-        try:
-            tmp['tx_hashes'] = request_result['tx_hashes'].copy()
-        except KeyError: 
-            print(f'Transaction not found in block: {request_result['block_header']['height']}')
-            tmp['tx_hashes'] = []
-        return pd.Series(data=tmp)
-    elif method == 'from_excel':
-        return pd.Series(data=request_result)
+def json_result_to_serie(request_result: dict)->pd.Series:
+    tmp = request_result['block_header'].copy()
+    try:
+        tmp['tx_hashes'] = request_result['tx_hashes'].copy()
+    except KeyError: 
+        print(f'Transaction not found in block: {request_result['block_header']['height']}')
+        tmp['tx_hashes'] = []
+    return pd.Series(data=tmp)
 
 """
 Get the block of height from the node url 
@@ -87,7 +88,7 @@ def get_block(height: int, url=MAIN_URL):
                     }
                 }
     #Make request to url, convert to a serie then return it
-    return json_result_to_serie(make_json_request(request, request['method'], url=MAIN_URL), 'from_node')
+    return json_result_to_serie(make_json_request(request, request['method'], url=MAIN_URL))
 
 def convert_keyoffset_to_request(index, amount=0):
         return {"index": index, "amount": amount}
@@ -103,10 +104,10 @@ def write_keyoffsets(key_offsets: set, filename = DATA_FILE_FROM_PATH+'/keyoffse
     while len(key_offsets)>max_requests_index*(i+1):
         #Requêtes au noeud pour charger les clés correspondantes aux keyoffsets et ajout à la liste result
         tmp = all_key_offsets_list[max_requests_index*i:max_requests_index*(i+1)]
-        result += get_info_output(out=[convert_keyoffset_to_request(keyoffset) for keyoffset in tmp])['outs']
+        result += get_info_output(out=tmp)['outs']
         i+=1
     tmp=all_key_offsets_list[max_requests_index*i:len(all_key_offsets_list)]
-    result += get_info_output(out=[convert_keyoffset_to_request(keyoffset) for keyoffset in tmp])['outs']
+    result += get_info_output(out=tmp)['outs']
     
     #Écriture des clés récupéré (result) vers un fichier csv 
     all_keys = {}
@@ -249,7 +250,10 @@ Given an ouptput index from a json tx, return the json request of the output
 """
 def get_info_output(out, url=MAIN_URL):
     if isinstance(out, list):
-        request = {"outputs": out}
+        if isinstance(out[0], int):
+            request = {"outputs": [convert_keyoffset_to_request(keyoffset) for keyoffset in out]}
+        else:
+            request = {"outputs": [convert_keyoffset_to_request(index=input_rct_v1[1][0], amount=input_rct_v1[0]) for input_rct_v1 in out]}
     else:
         request = {"outputs": [{"index": out, "amount": 0}]}
     return make_json_request(request, 'get_output') 
@@ -306,7 +310,7 @@ def get_edges_labels_txs(block_height: int, key_offsets: dict, blackball_adr: se
             else:
                 tx_all_mixings_spend_inputs += [key_offsets[i] for i in tx_all_inputs[input][1]]
         if len(tx_inputs_rct_v1) > 0:
-            tx_all_mixings_spend_inputs += [dict_input['key'] for dict_input in get_info_output([convert_keyoffset_to_request(index=input_rct_v1[1][0], amount=input_rct_v1[0]) for input_rct_v1 in tx_inputs_rct_v1])['outs']]
+            tx_all_mixings_spend_inputs += [dict_input['key'] for dict_input in get_info_output(tx_inputs_rct_v1)['outs']]
 
         
         #Ajout dans un dictionnaire contenant toutes les txs par hash avec entrée et sorties
