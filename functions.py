@@ -18,7 +18,7 @@ MIN_HEIGHT = 3139000
 MAX_HEIGHT = 3161280
 
 # Chemin absolu vers le fichier dans le dossier Data
-DATA_FILE_FROM_PATH = "Data/"#os.path.join(os.path.dirname(os.path.abspath('tmp.py')), "..", "Data")
+DATA_FILE_FROM_PATH = os.path.join(os.path.dirname(os.path.abspath('tmp.py')), "..", "Data")
 
 
 """
