@@ -18,7 +18,7 @@ MIN_HEIGHT = 3139000
 MAX_HEIGHT = 3161280
 
 # Chemin absolu vers le fichier dans le dossier Data
-DATA_FILE_FROM_PATH = os.path.join(os.path.dirname(os.path.abspath('tmp.py')), "..", "Data")
+DATA_FILE_FROM_PATH = "Data/"#os.path.join(os.path.dirname(os.path.abspath('tmp.py')), "..", "Data")
 
 
 """
@@ -43,7 +43,8 @@ def make_json_request(request: dict, method: str, url=MAIN_URL):
             return requests.post(url+'/get_outs', json=request).json()
         else:
             return requests.post(url, json=request).json()
-        
+
+
 """
 Given an hash of a tx, return his JSON request
 """
@@ -61,7 +62,6 @@ def get_info_tx(tx, url=MAIN_URL):
     return make_json_request(request, 'get_tx')
 
 
-
 """
 Convert a JSON request to a Serie
 """
@@ -73,6 +73,7 @@ def json_result_to_serie(request_result: dict)->pd.Series:
         print(f'Transaction not found in block: {request_result['block_header']['height']}')
         tmp['tx_hashes'] = []
     return pd.Series(data=tmp)
+
 
 """
 Get the block of height from the node url 
@@ -90,8 +91,10 @@ def get_block(height: int, url=MAIN_URL):
     #Make request to url, convert to a serie then return it
     return json_result_to_serie(make_json_request(request, request['method'], url=MAIN_URL))
 
+
 def convert_keyoffset_to_request(index, amount=0):
         return {"index": index, "amount": amount}
+
 
 def write_keyoffsets(key_offsets: set, filename = DATA_FILE_FROM_PATH+'/keyoffsets_to_adress.csv'):
     #Init des variables: nb d'objets max par requêtes, liste de toutes les keyoffsets, un indice i et une liste result 
@@ -118,6 +121,7 @@ def write_keyoffsets(key_offsets: set, filename = DATA_FILE_FROM_PATH+'/keyoffse
                 all_keys[all_key_offsets_list[index]] = result[index]['key']
     return all_keys
 
+
 def read_keys_and_keyoffsets(key_offsets: set):
     all_keys = {}
     tmp = set()
@@ -136,6 +140,7 @@ def read_keys_and_keyoffsets(key_offsets: set):
     except FileNotFoundError:
         return write_keyoffsets(key_offsets)
 
+
 def check_key_offsets(begin, end):
     all_key_offsets = set()
     for height in range(begin, end+1):
@@ -149,6 +154,7 @@ def check_key_offsets(begin, end):
                         all_key_offsets.update(j[1])
     read_keys_and_keyoffsets(all_key_offsets)
 
+
 def write_tx_csv(rows, filename):
     with open(filename, 'a') as f:
         for row in rows:
@@ -156,6 +162,7 @@ def write_tx_csv(rows, filename):
             for i in string_list_row:
                 f.write(i+"; ")
             f.write("\n")
+
 
 def read_tx_csv(height):
     col_names = ["tx_hash", "confirmations", "double_spend_seen", "vin", "vout", "extra", "version", "rct_signatures"]
@@ -244,7 +251,6 @@ def get_blocks_from_to(begin:int, end: int, url=MAIN_URL)->dict:
     return blocks_dict
 
 
-
 """
 Given an ouptput index from a json tx, return the json request of the output
 """
@@ -257,6 +263,7 @@ def get_info_output(out, url=MAIN_URL):
     else:
         request = {"outputs": [{"index": out, "amount": 0}]}
     return make_json_request(request, 'get_output') 
+
 
 def get_blackball_adress():
     def read_blackball_pool()->set:
@@ -290,8 +297,6 @@ def get_blackball_adress():
 
 #Return edges, labels and txs from a block height and key_offsets, , labels: dict, cpt_in, cpt_out
 def get_edges_labels_txs(block_height: int, key_offsets: dict, blackball_adr: set, edges: list, nodes_style: list, all_txs: dict, all_adr:dict):
-    #Compteur pour tester
-    nb_adr = 0
     #Récupération des infos des transactions du bloc
     txs = read_tx_csv(block_height)
     for tx in txs:
@@ -299,12 +304,10 @@ def get_edges_labels_txs(block_height: int, key_offsets: dict, blackball_adr: se
         # une liste pour les entrées avec rct et la liste avec toutes les adresses mixeurs compris de chaque entrée
         tx_hash = tx[0]
         tx_outputs = [i[1] for i in eval(tx[4])]
-        nb_adr += len(tx_outputs)
         tx_all_inputs = eval(tx[3])
         tx_all_mixings_spend_inputs = []
         tx_inputs_rct_v1 = []
         for input in range(len(tx_all_inputs)):
-            nb_adr += len(tx_all_inputs[input][1])
             if tx_all_inputs[input][0] > 0:
                 tx_inputs_rct_v1.append(tx_all_inputs[input])
             else:
@@ -351,8 +354,7 @@ def get_edges_labels_txs(block_height: int, key_offsets: dict, blackball_adr: se
         #Coloration du noeud de la tx_hash
         hash_style = {'color': 'yellow', 'shape': 'square'}
         nodes_style[tx_hash] = hash_style
-    #Réfléchir à un test
-    #assert(nb_adr==len(edges)) 
+
 
 def create_edges_labels_txs(begin, end):
     key_offsets = read_keys_and_keyoffsets(set())
@@ -391,6 +393,7 @@ def count_adr_in_tx(height):
             sum+=len(entry[1])
         sum += len(eval(tx[4]))
     return sum
+
 
 def draw_from_to(begin, end, url=MAIN_URL, min_mixing = 5):
     if end-begin >= 0:
@@ -450,12 +453,14 @@ def get_adress(pre_adr: str, l: list):
             res.append(i)
     return res
 
+
 def get_txs_list(adr:str, all_txs:dict):
     txs_list = []
     for i in all_txs:
         if (adr in all_txs[i]['in']) or (adr in all_txs[i]['out']):
             txs_list.append(i)
     return txs_list
+
 
 def get_common_inputs_and_difference(tx1_hash:str, tx2_hash:str):
     tx1_inputs = set(all_txs[tx1_hash]['in'])

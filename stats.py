@@ -4,7 +4,7 @@ import requests, json
 import matplotlib.pyplot as plt
 import numpy as np
 
-def get_stats(hash:str):
+def get_stats(hash:str, dict_txs:dict):
 
     #Stats: calcul la distribution des mixeurs par année
     def calcul_stats(blocks_height, mixings_hash):
@@ -26,7 +26,7 @@ def get_stats(hash:str):
             #requête pour récupérer l'en-tête du bloc
             block_header = requests.post(f.MAIN_URL+'/json_rpc', json=request).json()['result']['block_header']
             miner_tx = f.get_info_tx(block_header['miner_tx_hash'])
-            print(json.loads(miner_tx['txs_as_json'][0])['vout'])
+            #print(json.loads(miner_tx['txs_as_json'][0])['vout'])
             #Calcul correct du timestamp de la hauteur actuelle
             mixing_timestamp = block_header['timestamp']-3600*2
             #Ajout à hash_and_years
@@ -40,7 +40,7 @@ def get_stats(hash:str):
         return hash_and_years, count_distribution
 
     #Vérifier si hash est une transaction
-    if hash in all_txs:
+    if hash in list(dict_txs.keys()):
         print("Requêtes sur les entrées en cours...")
         #Info de la tx
         tx_json = eval(f.get_info_tx(hash)['txs'][0]['as_json'])
@@ -72,6 +72,7 @@ def get_stats(hash:str):
         hash_and_years, count_distribution_year = calcul_stats(blocks_height=blocks_height, mixings_hash=mixings_hash)
 
         print("Calcul des graphiques...")
+        print(f"Hash de la transaction: {hash}")
         #Figure de matplotlib pour la stat de distribution
         fig, ax = plt.subplots()
         years = [ts.timestamp_to_date(ts_dist).year for ts_dist in ts.DISTRIBUTION_YEAR]
@@ -80,10 +81,6 @@ def get_stats(hash:str):
         ax.set_xlabel("Années")
         ax.set_ylabel("Nombres de mixeurs par date")
         plt.show()
-        print(f"Hash de la transaction: {hash}")
         return hash_and_years
     else:
         print("NOT IMPLEMENTED: input or output")
-
-hash = f.get_adress(pre_adr="aeb6a0c", l=list(nodes_style.keys()))[0]
-hash_and_year = get_stats(hash=hash)
